@@ -1,4 +1,5 @@
-import { createSlice, PayloadAction } from '@reduxjs/toolkit'
+import type { PayloadAction } from '@reduxjs/toolkit'
+import { createSlice } from '@reduxjs/toolkit'
 
 export type Priority = 'low' | 'medium' | 'high'
 export type Status = 'todo' | 'inprogress' | 'done'

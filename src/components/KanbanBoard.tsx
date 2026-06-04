@@ -1,7 +1,7 @@
 import { useState } from 'react'
-import { useAppDispatch, useAppSelector } from '../store/hooks'
-import { moveTask, addTask, deleteTask, type Status, type Priority } from '../store/tasksSlice'
-import type { RootState } from '../store/store'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { fetchTasks, createTaskApi, moveTaskApi, deleteTaskApi } from '../api/tasks'
+import type { Status, Priority } from '../store/tasksSlice'
 
 const columns: { id: Status; label: string; color: string }[] = [
   { id: 'todo', label: 'To Do', color: 'border-gray-600' },
@@ -16,18 +16,44 @@ const priorityColors: Record<Priority, string> = {
 }
 
 export default function KanbanBoard() {
-  const dispatch = useAppDispatch()
-  const tasks = useAppSelector((state) => (state as RootState).tasks.items)
+  const queryClient = useQueryClient()
   const [dragging, setDragging] = useState<string | null>(null)
   const [showForm, setShowForm] = useState(false)
   const [form, setForm] = useState({ title: '', description: '', priority: 'medium' as Priority })
 
+  const { data: tasks = [], isLoading } = useQuery({
+    queryKey: ['tasks'],
+    queryFn: fetchTasks,
+  })
+
+  const createMutation = useMutation({
+    mutationFn: createTaskApi,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['tasks'] }),
+  })
+
+  const moveMutation = useMutation({
+    mutationFn: ({ id, status }: { id: string; status: Status }) =>
+      moveTaskApi(id, status),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['tasks'] }),
+  })
+
+  const deleteMutation = useMutation({
+    mutationFn: deleteTaskApi,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['tasks'] }),
+  })
+
   const handleAddTask = () => {
     if (!form.title.trim()) return
-    dispatch(addTask({ ...form, status: 'todo' }))
+    createMutation.mutate({ ...form, status: 'todo' })
     setForm({ title: '', description: '', priority: 'medium' })
     setShowForm(false)
   }
+
+  if (isLoading) return (
+    <div className="flex items-center justify-center h-64 text-gray-400">
+      Loading tasks...
+    </div>
+  )
 
   return (
     <div>
@@ -69,10 +95,16 @@ export default function KanbanBoard() {
             ))}
           </div>
           <div className="flex gap-2">
-            <button onClick={handleAddTask} className="bg-violet-600 hover:bg-violet-700 text-white text-sm px-4 py-2 rounded-lg transition-colors">
+            <button
+              onClick={handleAddTask}
+              className="bg-violet-600 hover:bg-violet-700 text-white text-sm px-4 py-2 rounded-lg transition-colors"
+            >
               Add
             </button>
-            <button onClick={() => setShowForm(false)} className="bg-gray-800 hover:bg-gray-700 text-gray-300 text-sm px-4 py-2 rounded-lg transition-colors">
+            <button
+              onClick={() => setShowForm(false)}
+              className="bg-gray-800 hover:bg-gray-700 text-gray-300 text-sm px-4 py-2 rounded-lg transition-colors"
+            >
               Cancel
             </button>
           </div>
@@ -85,18 +117,20 @@ export default function KanbanBoard() {
             key={col.id}
             className={`bg-gray-900 rounded-xl border-t-2 ${col.color} p-4 min-h-96`}
             onDragOver={e => e.preventDefault()}
-            onDrop={() => dragging && dispatch(moveTask({ id: dragging, status: col.id }))}
+            onDrop={() => dragging && moveMutation.mutate({ id: dragging, status: col.id })}
           >
             <div className="flex items-center justify-between mb-4">
-              <h2 className="font-semibold text-sm uppercase tracking-wider text-gray-400">{col.label}</h2>
+              <h2 className="font-semibold text-sm uppercase tracking-wider text-gray-400">
+                {col.label}
+              </h2>
               <span className="bg-gray-800 text-gray-400 text-xs px-2 py-1 rounded-full">
-                {(tasks as any[]).filter((t: any) => t.status === col.id).length}
+                {tasks.filter(t => t.status === col.id).length}
               </span>
             </div>
             <div className="flex flex-col gap-3">
-              {(tasks as any[])
-                .filter((t: any) => t.status === col.id)
-                .map((task: any) => (
+              {tasks
+                .filter(t => t.status === col.id)
+                .map(task => (
                   <div
                     key={task.id}
                     draggable
@@ -111,7 +145,7 @@ export default function KanbanBoard() {
                           {task.priority}
                         </span>
                         <button
-                          onClick={() => dispatch(deleteTask(task.id))}
+                          onClick={() => deleteMutation.mutate(task.id)}
                           className="text-gray-600 hover:text-rose-400 transition-colors opacity-0 group-hover:opacity-100 text-xs"
                         >
                           ✕
