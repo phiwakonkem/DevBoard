@@ -19,6 +19,7 @@ export default function KanbanBoard() {
   const queryClient = useQueryClient()
   const [dragging, setDragging] = useState<string | null>(null)
   const [showForm, setShowForm] = useState(false)
+  const [filter, setFilter] = useState<'all' | 'low' | 'medium' | 'high'>('all')
   const [form, setForm] = useState({ title: '', description: '', priority: 'medium' as Priority })
 
   const { data: tasks = [], isLoading } = useQuery({
@@ -65,6 +66,22 @@ export default function KanbanBoard() {
         >
           + Add Task
         </button>
+      </div>
+
+      <div className="flex gap-2 mb-6">
+        {(['all', 'low', 'medium', 'high'] as const).map(p => (
+          <button
+            key={p}
+            onClick={() => setFilter(p)}
+            className={`text-xs px-3 py-1.5 rounded-full capitalize transition-colors ${
+              filter === p
+              ? 'bg-violet-600 text-white'
+              : 'bg-gray-800 text-gray-400 hover:text-white'
+            }`}
+          >
+            {p}
+          </button>
+        ))}
       </div>
 
       {showForm && (
@@ -130,6 +147,7 @@ export default function KanbanBoard() {
             <div className="flex flex-col gap-3">
               {tasks
                 .filter(t => t.status === col.id)
+                .filter(t => filter === 'all' || t.priority === filter)
                 .map(task => (
                   <div
                     key={task.id}
