@@ -1,73 +1,135 @@
-# React + TypeScript + Vite
+# DevBoard
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A Kanban-style developer task board with drag-and-drop columns, priority filtering, and real server-state management — built to talk to a real REST API rather than relying on mocked local state.
 
-Currently, two official plugins are available:
+![React](https://img.shields.io/badge/React-19-61DAFB?logo=react) ![TypeScript](https://img.shields.io/badge/TypeScript-6-blue?logo=typescript) ![Redux Toolkit](https://img.shields.io/badge/Redux_Toolkit-2-764ABC?logo=redux) ![TanStack Query](https://img.shields.io/badge/TanStack_Query-5-FF4154) ![Vite](https://img.shields.io/badge/Vite-8-646CFF?logo=vite)
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+---
 
-## React Compiler
+## Features
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- **Kanban board** — three columns (To Do, In Progress, Done) with drag-and-drop task movement
+- **Task creation** — title, description, and priority (low / medium / high)
+- **Priority filtering** — filter the board by task priority
+- **Server-state management** — TanStack Query handles fetching, caching, and invalidation against a live backend
+- **Global state** — Redux Toolkit slice models the task shape and local UI state
+- **Type-safe end to end** — shared `Task`, `Status`, and `Priority` types across API layer and UI
 
-## Expanding the ESLint configuration
+## Tech Stack
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+| Layer | Technology |
+|---|---|
+| Framework | React 19 |
+| Language | TypeScript |
+| Build tool | Vite 8 |
+| Server state | TanStack Query |
+| Client state | Redux Toolkit + React Redux |
+| HTTP client | Axios |
+| Routing | React Router DOM |
+| Styling | Tailwind CSS 4 |
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+## ⚠️ Backend Required
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+This repository contains the **frontend only**. The app expects a REST API running at:
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```
+http://localhost:8080/api
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+with the following endpoints:
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/tasks` | Fetch all tasks |
+| `POST` | `/tasks` | Create a new task |
+| `PATCH` | `/tasks/:id/move` | Update a task's status (`todo` / `inprogress` / `done`) |
+| `DELETE` | `/tasks/:id` | Delete a task |
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+A `Task` object has the shape:
+
+```ts
+interface Task {
+  id: string
+  title: string
+  description: string
+  priority: 'low' | 'medium' | 'high'
+  status: 'todo' | 'inprogress' | 'done'
+  createdAt: string
+}
 ```
+
+The intended backend for this project is a **Go (Gin)** REST API — if you don't have one running yet, you can point `src/api/tasks.ts` at any API matching this contract, or mock it with a tool like [json-server](https://github.com/typicode/json-server).
+
+## Project Structure
+
+```
+DevBoard/
+├── src/
+│   ├── api/
+│   │   └── tasks.ts          # Axios calls to the backend API
+│   ├── components/
+│   │   └── KanbanBoard.tsx   # Main board UI, drag-and-drop, filters
+│   ├── store/
+│   │   ├── store.ts          # Redux store config
+│   │   ├── tasksSlice.ts     # Task types + slice
+│   │   └── hooks.ts          # Typed useSelector/useDispatch
+│   ├── App.tsx
+│   └── main.tsx
+└── public/
+```
+
+## Getting Started
+
+### Prerequisites
+
+- Node.js 20+
+- A running backend matching the API contract above (see [Backend Required](#-backend-required))
+
+### 1. Clone the repository
+
+```bash
+git clone https://github.com/phiwakonkem/DevBoard.git
+cd DevBoard
+```
+
+### 2. Install dependencies
+
+```bash
+npm install
+```
+
+### 3. Point the app at your backend
+
+By default the API base URL is `http://localhost:8080/api`, set in `src/api/tasks.ts`. Update it there if your backend runs elsewhere.
+
+### 4. Run the development server
+
+```bash
+npm run dev
+```
+
+Visit the URL Vite prints (typically [http://localhost:5173](http://localhost:5173)).
+
+## Available Scripts
+
+| Command | Description |
+|---|---|
+| `npm run dev` | Start the Vite dev server |
+| `npm run build` | Type-check and build for production |
+| `npm run lint` | Run ESLint |
+| `npm run preview` | Preview the production build locally |
+
+## Roadmap
+
+- [ ] Ship the companion Go (Gin) backend as a public repo
+- [ ] Add task editing and deletion from the UI
+- [ ] User accounts / multi-board support
+
+## Author
+
+**Phiwakonke Mthethwa**
+Full-Stack Developer, Centurion, South Africa
+
+- GitHub: [@phiwakonkem](https://github.com/phiwakonkem)
+- LinkedIn: [phiwakonke-mthethwa](https://www.linkedin.com/in/phiwakonke-mthethwa-97aa74331)
+- Email: phiwakonkem@gmail.com
